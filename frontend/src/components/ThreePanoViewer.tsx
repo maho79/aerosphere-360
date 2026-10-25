@@ -2272,6 +2272,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
   }, [isCalibratingSun]);
 
   useEffect(() => {
+    isDisposedRef.current = false;
     const container = containerRef.current;
     if (!container) return;
 
@@ -3287,6 +3288,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
 
   // 2. Progressive Texture Loading for the active panorama (preserves camera orientation, tilt, zoom, and projection)
   useEffect(() => {
+    isDisposedRef.current = false;
     if (!isRendererReady || !materialRef.current || !quadMaterialRef.current || !rendererRef.current) return;
 
     const currentEpoch = ++loadEpochRef.current;
