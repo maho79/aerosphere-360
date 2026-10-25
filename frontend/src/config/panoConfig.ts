@@ -59,15 +59,30 @@ export interface PanoBrandingConfig {
   };
 }
 
+export type StorageMode = 'local' | 'remote';
+
 export interface PanoStorageConfig {
-  /** Base URL for low-resolution fast thumbnails (e.g. 400x200) */
+  /**
+   * Storage delivery mode:
+   * - 'local' (default): Direct streaming from local bundled assets in frontend/public.
+   *   Works immediately out-of-the-box with sample panoramas without any cloud configuration.
+   * - 'remote': Streams textures from external cloud storage / CDN / Cloudflare R2 bucket.
+   */
+  mode: StorageMode;
+  /** Active base URL for low-resolution fast thumbnails */
   thumbnailsUrl: string;
-  /** Base URL for 2K medium resolution textures (2048x1024) */
+  /** Active base URL for 2K medium resolution textures */
   panoramas2kUrl: string;
-  /** Base URL for full web-resolution textures (up to 15360x7680) */
+  /** Active base URL for full web-resolution textures */
   panoramasWebUrl: string;
   /** Optional private / development tunnel base URL */
   tunnelUrl?: string;
+  /** Remote cloud storage endpoints (used when mode === 'remote') */
+  remote: {
+    thumbnailsUrl: string;
+    panoramas2kUrl: string;
+    panoramasWebUrl: string;
+  };
 }
 
 export interface PanoAuthConfig {
@@ -89,6 +104,10 @@ export interface PanoAppConfig {
   storage: PanoStorageConfig;
   auth: PanoAuthConfig;
 }
+
+// Active storage mode: 'local' (default out-of-the-box) or 'remote' (Cloudflare R2 / S3 / CDN)
+const storageMode: StorageMode = ((import.meta.env.VITE_STORAGE_MODE as StorageMode) || 'local');
+const isRemoteMode = storageMode === 'remote';
 
 export const panoConfig: PanoAppConfig = {
   analytics: {
@@ -129,12 +148,31 @@ export const panoConfig: PanoAppConfig = {
     },
   },
 
-  // Storage endpoints: defaults to relative local paths with optional CDN prefix
+  // Storage configuration:
+  // - 'local' (default): Direct streaming from bundled assets in frontend/public.
+  // - 'remote': Streams textures from external cloud storage / CDN / Cloudflare R2 bucket.
   storage: {
-    thumbnailsUrl: import.meta.env.VITE_THUMBNAILS_URL || '/thumbnails',
-    panoramas2kUrl: import.meta.env.VITE_PANORAMAS_2K_URL || '/panoramas_2k',
-    panoramasWebUrl: import.meta.env.VITE_PANORAMAS_WEB_URL || '/panoramas_web',
+    mode: storageMode,
+
+    thumbnailsUrl: isRemoteMode
+      ? (import.meta.env.VITE_REMOTE_THUMBNAILS_URL || import.meta.env.VITE_THUMBNAILS_URL || '/thumbnails')
+      : (import.meta.env.VITE_THUMBNAILS_URL || '/thumbnails'),
+
+    panoramas2kUrl: isRemoteMode
+      ? (import.meta.env.VITE_REMOTE_2K_URL || import.meta.env.VITE_PANORAMAS_2K_URL || '/panoramas_2k')
+      : (import.meta.env.VITE_PANORAMAS_2K_URL || '/panoramas_2k'),
+
+    panoramasWebUrl: isRemoteMode
+      ? (import.meta.env.VITE_REMOTE_WEB_URL || import.meta.env.VITE_PANORAMAS_WEB_URL || '/panoramas_web')
+      : (import.meta.env.VITE_PANORAMAS_WEB_URL || '/panoramas_web'),
+
     tunnelUrl: import.meta.env.VITE_TUNNEL_URL || '',
+
+    remote: {
+      thumbnailsUrl: import.meta.env.VITE_REMOTE_THUMBNAILS_URL || '',
+      panoramas2kUrl: import.meta.env.VITE_REMOTE_2K_URL || '',
+      panoramasWebUrl: import.meta.env.VITE_REMOTE_WEB_URL || '',
+    },
   },
 
   // Admin authentication (Google OAuth)

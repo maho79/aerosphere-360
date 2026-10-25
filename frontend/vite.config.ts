@@ -23,6 +23,7 @@ export default defineConfig({
           }
           if (
             rawUrl.startsWith('/thumbnails/') ||
+            rawUrl.startsWith('/panoramas_2k/') ||
             rawUrl.startsWith('/panoramas_web/') ||
             rawUrl.startsWith('/panoramas_8k/') ||
             rawUrl.startsWith('/panoramas/')
@@ -30,15 +31,22 @@ export default defineConfig({
             try {
               const decoded = decodeURIComponent(rawUrl);
               let filePath = path.join(import.meta.dirname, 'public', decoded);
-              if (!fs.existsSync(filePath) && decoded.startsWith('/panoramas/')) {
-                const fallback = path.join(import.meta.dirname, 'public', decoded.replace('/panoramas/', '/panoramas_web/'));
+              if (!fs.existsSync(filePath) && (decoded.startsWith('/panoramas/') || decoded.startsWith('/panoramas_8k/'))) {
+                const fallback = path.join(import.meta.dirname, 'public', decoded.replace('/panoramas_8k/', '/panoramas_web/').replace('/panoramas/', '/panoramas_web/'));
                 if (fs.existsSync(fallback)) {
                   filePath = fallback;
                 }
               }
               if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+                const stat = fs.statSync(filePath);
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
                 res.setHeader('Content-Type', decoded.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+                res.setHeader('Content-Length', stat.size);
                 res.setHeader('Cache-Control', 'public, max-age=86400');
+                if (req.method === 'HEAD') {
+                  return res.end();
+                }
                 return fs.createReadStream(filePath).pipe(res);
               }
             } catch (err) {
@@ -232,83 +240,19 @@ export default defineConfig({
         });
       },
     },
-    {
-      name: 'copy-lightweight-public',
-      closeBundle() {
-        const publicDir = path.resolve(import.meta.dirname, 'public');
-        const distDir = path.resolve(import.meta.dirname, 'dist');
-        if (!fs.existsSync(distDir)) {
-          fs.mkdirSync(distDir, { recursive: true });
-        }
-
-        const isSensitive = (name: string) => {
-          const lower = name.toLowerCase();
-          return (
-            lower.startsWith('.env') ||
-            lower.startsWith('.git') ||
-            lower === '.ds_store' ||
-            lower === 'thumbs.db' ||
-            lower.endsWith('.bak') ||
-            lower.endsWith('.swp') ||
-            lower.endsWith('.swo') ||
-            lower.endsWith('.tmp')
-          );
-        };
-
-        const copyRecursive = (src: string, dest: string) => {
-          const baseName = path.basename(src);
-          if (isSensitive(baseName)) return;
-
-          const stat = fs.statSync(src);
-          if (stat.isDirectory()) {
-            if (!fs.existsSync(dest)) {
-              fs.mkdirSync(dest, { recursive: true });
-            }
-            const children = fs.readdirSync(src);
-            for (const child of children) {
-              copyRecursive(path.join(src, child), path.join(dest, child));
-            }
-          } else if (stat.isFile()) {
-            fs.copyFileSync(src, dest);
-          }
-        };
-
-        const entries = fs.readdirSync(publicDir);
-        for (const entry of entries) {
-          if (isSensitive(entry)) continue;
-          if (
-            entry === 'panoramas' ||
-            entry === 'panoramas_web' ||
-            entry === 'panoramas_8k' ||
-            entry === 'panoramas_2k' ||
-            entry === 'thumbnails' ||
-            entry === 'tiles'
-          ) {
-            continue; // Prevent duplicating heavy media into dist
-          }
-          const src = path.join(publicDir, entry);
-          const dest = path.join(distDir, entry);
-          try {
-            copyRecursive(src, dest);
-          } catch (err) {
-            console.warn(`Notice: Could not copy ${entry}:`, (err as Error).message);
-          }
-        }
-      },
-    },
   ],
   server: {
+    cors: true,
     watch: {
       ignored: [
+        '**/dist/**',
         '**/public/panoramas/**',
         '**/public/panoramas_8k/**',
-        '**/public/thumbnails/**',
-        '**/thumbnails/**',
       ],
     },
   },
   build: {
-    copyPublicDir: false, // Avoid duplicating massive 30GB photo library on every build
-    emptyOutDir: false, // Avoid Windows file lock issues when dev server or browser has files open
+    copyPublicDir: true,
+    emptyOutDir: false,
   },
 });

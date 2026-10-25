@@ -822,6 +822,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.ClampToEdgeWrapping;
     tex.generateMipmaps = false;
+    tex.needsUpdate = true;
   };
 
   const downsampleSourceIfNeeded = (
@@ -873,7 +874,10 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
         if (isDisposedRef.current) return;
         try {
           const finalSource = downsampleSourceIfNeeded(img, maxTextureSize);
-          const tex = new THREE.CanvasTexture(finalSource);
+          const tex = (typeof HTMLCanvasElement !== 'undefined' && finalSource instanceof HTMLCanvasElement)
+                ? new THREE.CanvasTexture(finalSource)
+                : new THREE.Texture(finalSource as any);
+              tex.needsUpdate = true;
           configureTexture(tex);
           if (rendererRef.current) {
             try { rendererRef.current.initTexture(tex); } catch {}
@@ -930,7 +934,10 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
                 return;
               }
 
-              const tex = new THREE.CanvasTexture(finalSource);
+              const tex = (typeof HTMLCanvasElement !== 'undefined' && finalSource instanceof HTMLCanvasElement)
+                ? new THREE.CanvasTexture(finalSource)
+                : new THREE.Texture(finalSource as any);
+              tex.needsUpdate = true;
               tex.flipY = false;
               configureTexture(tex);
               if (rendererRef.current) {
@@ -1000,17 +1007,21 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
     }
 
     const cacheBuster = pano?.size ? `?v=${pano.size}` : '';
-    const pano2kUrl = `${panoConfig.storage.panoramas2kUrl}/${cleanKey}${cacheBuster}`;
+    const isLocalMode = panoConfig.storage.mode === 'local';
+    const pano2kUrl = isLocalMode
+      ? `/panoramas_2k/${cleanKey}${cacheBuster}`
+      : `${panoConfig.storage.panoramas2kUrl}/${cleanKey}${cacheBuster}`;
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const highResCandidates = [
-      `${panoConfig.storage.panoramasWebUrl}/${cleanKey}${cacheBuster}`,
-      `/panoramas_8k/${cleanKey}${cacheBuster}`,
-      ...(isLocal && panoConfig.storage.tunnelUrl ? [`${panoConfig.storage.tunnelUrl}/panoramas_8k/${cleanKey}${cacheBuster}`] : []),
-      `${panoConfig.storage.panoramasWebUrl}/${cleanKey}${cacheBuster}`,
-      `/panoramas_web/${cleanKey}${cacheBuster}`,
-      ...(isLocal && panoConfig.storage.tunnelUrl ? [`${panoConfig.storage.tunnelUrl}/panoramas_web/${cleanKey}${cacheBuster}`] : []),
-      `/api/panoramas/asset?path=${encodeURIComponent(cleanKey)}${cacheBuster ? '&' + cacheBuster.slice(1) : ''}`
-    ];
+    const highResCandidates = isLocalMode
+      ? [
+          `/panoramas_web/${cleanKey}${cacheBuster}`,
+          `/panoramas_2k/${cleanKey}${cacheBuster}`,
+        ]
+      : [
+          ...(panoConfig.storage.panoramasWebUrl ? [`${panoConfig.storage.panoramasWebUrl}/${cleanKey}${cacheBuster}`] : []),
+          `/panoramas_web/${cleanKey}${cacheBuster}`,
+          ...(isLocal && panoConfig.storage.tunnelUrl ? [`${panoConfig.storage.tunnelUrl}/panoramas_web/${cleanKey}${cacheBuster}`] : []),
+        ];
 
     const storePreloaded = (tex: THREE.Texture, isHighRes: boolean) => {
       if (isDisposedRef.current) {
@@ -3418,6 +3429,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
       // and keep the ongoing blend from prevTexture (Pano A) to newTex (Pano B).
       if (isPanoCrossfadeActiveRef.current) {
         material.map = newTex;
+        material.needsUpdate = true;
         material.color.setHex(0xffffff);
         quadMaterial.uniforms.uTexture.value = newTex;
         triggerCrossfade();
@@ -3456,6 +3468,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
         stateRef.current.crossfadeDuration = 200;
       }
       material.map = newTex;
+      material.needsUpdate = true;
       material.color.setHex(0xffffff);
       quadMaterial.uniforms.uTexture.value = newTex;
     };
@@ -3472,49 +3485,38 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
     const hasPrevVisible = sphereUniformsRef.current.uHasPrev.value > 0.5;
     let thumbTimeout: any = null;
 
+    const isLocalMode = panoConfig.storage.mode === 'local';
     const thumbPath = `/thumbnails/${cleanFilename}${cacheBuster}`;
-    const r2ThumbPath = `${panoConfig.storage.thumbnailsUrl}/${cleanFilename}${cacheBuster}`;
-    const pano2kDirectPath = `${panoConfig.storage.panoramas2kUrl}/${cleanFilename}${cacheBuster}`;
+    const r2ThumbPath = isLocalMode
+      ? `/thumbnails/${cleanFilename}${cacheBuster}`
+      : `${panoConfig.storage.thumbnailsUrl}/${cleanFilename}${cacheBuster}`;
+    const pano2kDirectPath = isLocalMode
+      ? `/panoramas_2k/${cleanFilename}${cacheBuster}`
+      : `${panoConfig.storage.panoramas2kUrl}/${cleanFilename}${cacheBuster}`;
     const pano2kPath = `/panoramas_2k/${cleanFilename}${cacheBuster}`;
-    const pano8kDirectPath = `${panoConfig.storage.panoramasWebUrl}/${cleanFilename}${cacheBuster}`;
-    const pano8kPath = `/panoramas_8k/${cleanFilename}${cacheBuster}`;
+    const pano8kDirectPath = isLocalMode
+      ? `/panoramas_web/${cleanFilename}${cacheBuster}`
+      : `${panoConfig.storage.panoramasWebUrl}/${cleanFilename}${cacheBuster}`;
+    const pano8kPath = `/panoramas_web/${cleanFilename}${cacheBuster}`;
 
     const getHighResCandidateUrls = (): string[] => {
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       const urls: string[] = [];
-      // 1. Cloudflare R2 direct CDN (fastest for published public masters in R2)
-      urls.push(`${panoConfig.storage.panoramasWebUrl}/${cleanFilename}${cacheBuster}`);
-      // 2. Relative path (proxied by Pages/Worker with tunnel fallback)
-      urls.push(`/panoramas_web/${cleanFilename}${cacheBuster}`);
-      // 3. Direct Cloudflare Tunnel to local server (localhost dev only)
-      if (isLocal) {
-        urls.push(`${panoConfig.storage.tunnelUrl || ''}/panoramas_web/${cleanFilename}${cacheBuster}`);
-        urls.push(`${panoConfig.storage.tunnelUrl || ''}/panoramas/${cleanFilename}${cacheBuster}`);
-      }
-      urls.push(`/panoramas/${cleanFilename}${cacheBuster}`);
-      // 5. Cloudflare Pages Functions asset proxy route
-      urls.push(`/api/panoramas/asset?path=${encodeURIComponent(cleanFilename)}${cacheBuster ? '&' + cacheBuster.slice(1) : ''}`);
-
-      if (cleanFilename.startsWith('private/')) {
-        const stripped = cleanFilename.replace(/^private\//, '');
-        urls.push(`${panoConfig.storage.panoramasWebUrl}/${stripped}${cacheBuster}`);
-        urls.push(`/panoramas_web/${stripped}${cacheBuster}`);
-        if (isLocal) {
-          urls.push(`${panoConfig.storage.tunnelUrl || ''}/panoramas_web/${stripped}${cacheBuster}`);
-          urls.push(`${panoConfig.storage.tunnelUrl || ''}/panoramas/${stripped}${cacheBuster}`);
-        }
-        urls.push(`/panoramas/${stripped}${cacheBuster}`);
-        urls.push(`/api/panoramas/asset?path=${encodeURIComponent(stripped)}${cacheBuster ? '&' + cacheBuster.slice(1) : ''}`);
+      if (isLocalMode) {
+        urls.push(`/panoramas_web/${cleanFilename}${cacheBuster}`);
+        urls.push(`/panoramas_2k/${cleanFilename}${cacheBuster}`);
       } else {
-        urls.push(`/panoramas_web/private/${cleanFilename}${cacheBuster}`);
-        if (isLocal) {
-          urls.push(`${panoConfig.storage.tunnelUrl || ''}/panoramas_web/private/${cleanFilename}${cacheBuster}`);
-          urls.push(`${panoConfig.storage.tunnelUrl || ''}/panoramas/private/${cleanFilename}${cacheBuster}`);
+        if (panoConfig.storage.panoramasWebUrl) {
+          urls.push(`${panoConfig.storage.panoramasWebUrl}/${cleanFilename}${cacheBuster}`);
         }
-        urls.push(`/api/panoramas/asset?path=${encodeURIComponent('private/' + cleanFilename)}${cacheBuster ? '&' + cacheBuster.slice(1) : ''}`);
+        urls.push(`/panoramas_web/${cleanFilename}${cacheBuster}`);
+        urls.push(`/panoramas_2k/${cleanFilename}${cacheBuster}`);
       }
-
-      return Array.from(new Set(urls));
+      if (isLocal && panoConfig.storage.tunnelUrl) {
+        urls.push(`${panoConfig.storage.tunnelUrl}/panoramas_web/${cleanFilename}${cacheBuster}`);
+        urls.push(`${panoConfig.storage.tunnelUrl}/panoramas/${cleanFilename}${cacheBuster}`);
+      }
+      return Array.from(new Set(urls.filter(Boolean)));
     };
 
     // Apply high-res 8K/11K/15K texture and cleanup lower-res textures
@@ -3540,6 +3542,8 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
 
       crossfadeToResolution(tex);
       triggerCrossfade();
+      material.map = tex;
+      material.needsUpdate = true;
       activeTexturesRef.current.full = tex;
       activeTexturePanoIdRef.current = String(panorama.id);
       highResLoaded = true;
@@ -3579,6 +3583,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
         console.warn('Ultra-HD texture failed or timed out; maintaining 8K/4K HD as permanent view.');
         const tex = activeTexturesRef.current.pano8k;
         material.map = tex;
+        material.needsUpdate = true;
         material.color.setHex(0xffffff);
         quadMaterial.uniforms.uTexture.value = tex;
         triggerCrossfade();
@@ -3690,6 +3695,8 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
 
       crossfadeToResolution(tex);
       triggerCrossfade();
+      material.map = tex;
+      material.needsUpdate = true;
       activeTexturesRef.current.pano8k = tex;
       activeTexturePanoIdRef.current = String(panorama.id);
 
@@ -3750,11 +3757,17 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
       if (isDisposedRef.current || highResLoaded || currentEpoch !== loadEpochRef.current) return;
 
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const k8Candidates = [
-        pano8kDirectPath,
-        pano8kPath,
-        ...(isLocal && panoConfig.storage.tunnelUrl ? [`${panoConfig.storage.tunnelUrl}/panoramas_8k/${cleanFilename}${cacheBuster}`] : [])
-      ];
+      const k8Candidates: string[] = isLocalMode
+        ? [
+            `/panoramas_web/${cleanFilename}${cacheBuster}`,
+            `/panoramas_2k/${cleanFilename}${cacheBuster}`,
+          ]
+        : [
+            pano8kDirectPath,
+            `/panoramas_web/${cleanFilename}${cacheBuster}`,
+            pano8kPath,
+            ...(isLocal && panoConfig.storage.tunnelUrl ? [`${panoConfig.storage.tunnelUrl}/panoramas_web/${cleanFilename}${cacheBuster}`] : []),
+          ];
 
       const try8K = (index: number) => {
         if (index >= k8Candidates.length) {
@@ -3814,6 +3827,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
         highResLoaded = true;
         isHighResFinishedRef.current = true;
         material.map = tex;
+        material.needsUpdate = true;
         material.color.setHex(0xffffff);
         quadMaterial.uniforms.uTexture.value = tex;
         triggerCrossfade();
@@ -3830,6 +3844,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
       if (!hasPrevVisible) {
         // Initial page load: show 2K immediately so user isn't on a blank screen
         material.map = tex;
+        material.needsUpdate = true;
         material.color.setHex(0xffffff);
         quadMaterial.uniforms.uTexture.value = tex;
         triggerCrossfade();
@@ -3841,6 +3856,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
         fallback2kTimeoutRef.current = setTimeout(() => {
           if (currentEpoch === loadEpochRef.current && !highResLoaded && !isDisposedRef.current) {
             material.map = tex;
+            material.needsUpdate = true;
             material.color.setHex(0xffffff);
             quadMaterial.uniforms.uTexture.value = tex;
             triggerCrossfade();
@@ -3908,6 +3924,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
           fallback2kTimeoutRef.current = setTimeout(() => {
             if (currentEpoch === loadEpochRef.current && !highResLoaded && !isDisposedRef.current) {
               material.map = preloaded.tex;
+              material.needsUpdate = true;
               material.color.setHex(0xffffff);
               quadMaterial.uniforms.uTexture.value = preloaded.tex;
               triggerCrossfade();
@@ -3942,6 +3959,7 @@ export const ThreePanoViewer = forwardRef<ThreePanoViewerRef, ThreePanoViewerPro
       activeTexturesRef.current.thumb = thumb;
       activeTexturePanoIdRef.current = String(panorama.id);
       material.map = thumb;
+      material.needsUpdate = true;
       material.color.setHex(0xffffff);
       quadMaterial.uniforms.uTexture.value = thumb;
       triggerCrossfade();
