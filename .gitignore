@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Production build outputs
+dist/
+build/
+
+# Local Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.token
+tools/
+wiki_temp/
+
+# Python & Processing
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+.pytest_cache/
+input_photos/
+output_photos/
+
+# Cloudflare & Wrangler
+.wrangler/
+.mf/
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

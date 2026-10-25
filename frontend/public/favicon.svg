@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0a1220"/>
+      <stop offset="100%" stop-color="#020712"/>
+    </linearGradient>
+
+    <!-- Cyan Neon Gradient -->
+    <linearGradient id="cyanGrad" x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <!-- Orbit Dynamic Gradient -->
+    <linearGradient id="orbitGrad" x1="8" y1="20" x2="56" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#a5f3fc"/>
+      <stop offset="40%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+
+    <!-- Radial Sphere Shading -->
+    <radialGradient id="sphereGrad" cx="30" cy="28" r="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0891b2" stop-opacity="0.3"/>
+      <stop offset="70%" stop-color="#083344" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#021422" stop-opacity="0.95"/>
+    </radialGradient>
+
+    <!-- Glow Filter -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Squircle Base Frame -->
+  <rect width="64" height="64" rx="16" fill="url(#bg)" stroke="#06b6d4" stroke-width="1.5" stroke-opacity="0.4"/>
+
+  <!-- Back Orbit Arc (depth behind the sphere) -->
+  <path d="M 12 37 C 9 25, 21 16, 38 16 C 49 16, 55 20, 55 25" 
+        stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="3 3" opacity="0.65"/>
+
+  <!-- Spherical Globe Core -->
+  <circle cx="32" cy="32" r="18" fill="url(#sphereGrad)" stroke="url(#cyanGrad)" stroke-width="2"/>
+
+  <!-- Spherical Grid: Longitude and Latitude Guides -->
+  <ellipse cx="32" cy="32" rx="7.5" ry="18" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.35" fill="none"/>
+  <ellipse cx="32" cy="32" rx="18" ry="6" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.35" fill="none"/>
+
+  <!-- Foreground Orbit Arc (wrapping in front of sphere with perspective and glow) -->
+  <path d="M 55 25 C 56 35, 47 48, 28 49 C 18 49.5, 11 44, 9 37" 
+        fill="none" stroke="url(#orbitGrad)" stroke-width="3" stroke-linecap="round" filter="url(#neonGlow)"/>
+
+  <!-- Glowing Arrowhead -->
+  <path d="M 6 41 L 9 34 L 15 39" 
+        fill="none" stroke="#e0f2fe" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- High-contrast "360°" Mark -->
+  <text x="31" y="37" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif" font-weight="900" font-size="13" fill="#ffffff" letter-spacing="-0.5" filter="url(#neonGlow)">360°</text>
+</svg>
