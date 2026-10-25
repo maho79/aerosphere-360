@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#090a0f" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <title>AeroSphere 360 - Interactive Aerial Panorama Engine</title>
+    <meta name="description" content="Interaktívna galéria 360° panorám vo vysokom rozlíšení (8K až 14K). Preskúmajte mestá a prírodu z vtáčej perspektívy." />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- Open Graph / WhatsApp / Facebook / Telegram -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AeroSphere 360" />
+    <meta property="og:title" content="AeroSphere 360" />
+    <meta property="og:description" content="Interaktívna galéria 360° panorám vo vysokom rozlíšení (8K až 14K). Preskúmajte mestá a prírodu z vtáčej perspektívy." />
+    <meta property="og:image" content="https://panorama.trusik.link/favicon.svg" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AeroSphere 360" />
+    <meta name="twitter:description" content="Interaktívna galéria 360° panorám vo vysokom rozlíšení (8K až 14K)." />
+    <!-- Google Analytics (GA4) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-8D0W2TW0C5"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-8D0W2TW0C5', {
+        page_title: 'AeroSphere 360'
+      });
+    </script>
+    <!-- Google Identity Services for Admin OAuth -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

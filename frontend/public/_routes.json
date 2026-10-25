@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "include": ["/api/*", "/.env*", "/.git*", "/*.bak", "/*.swp"],
+  "exclude": ["/.well-known/*", "/panoramas_2k/*", "/panoramas_web/*", "/thumbnails/*", "/tiles/*", "/assets/*"]
+}
