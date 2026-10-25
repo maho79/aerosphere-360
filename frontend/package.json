@@ -1,6 +1,6 @@
 {
   "name": "aerosphere-360",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Next-Gen WebGL 360° Spherical Panorama Web Engine & Processing Pipeline",
   "author": "Marian Trusik (https://panorama.trusik.link)",
   "license": "MIT",
